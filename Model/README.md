@@ -1,10 +1,10 @@
 # Intro
 
-This is a base way of creating an image using stabilityai/stable-diffusion-xl-base-1.0
-ref: https://huggingface.co/stabilityai/stable-diffusion-2
+This is a basic way of creating an image using stabilityai/stable-diffusion-2
+ref: https://huggingface.co/stabilityai/stable-diffusion-2-1
 
 # How to run
-step 1: install diffusers
+Step 1: install diffusers
 ```bash
 pip install diffusers
 ```
