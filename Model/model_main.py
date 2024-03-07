@@ -2,6 +2,7 @@ from diffusers import StableDiffusionPipeline
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 import torch
+from deap import creator, base, tools, algorithms
 
 # Load CLIP model and processor
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
@@ -23,6 +24,22 @@ def score_image_with_clip(image):
     outputs = clip_model(**inputs)
     probs = outputs.logits_per_image.softmax(dim=1)
     return probs[0][0].item(), probs[0][1].item()
+
+class GAOptimizer:
+    def __init__(self) -> None:
+        pass
+
+    def eval_fitness(self, groupImage):
+        pass
+
+    def crossover(ind1, ind2):
+        pass
+
+    def mutate(individual, param_ranges):
+        pass
+
+    def optimization(self):
+        pass
 
 if __name__ == "__main__":
     prompt = "An illustration of a modern software engineer working at a computer in a tech company office."
