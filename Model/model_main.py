@@ -13,7 +13,7 @@ clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 # Function to generate images with Stable Diffusion
 def generate_image(prompt):
     # Load the pipeline for the specified model
-    pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2").to("cuda") # Use cuda if you have a good GPU
+    pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2").to("cuda") # Use cuda if you have a good GPU, otherwise
     pipe = pipe.to(torch.float32)
     # Generate the image
     with torch.no_grad():
