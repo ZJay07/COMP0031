@@ -20,3 +20,6 @@ Replace the line above with this line
 ```python
 client = OpenAI(apikey="your api key here")
 ```
+
+# Purpose of the experiment
+To find the most optimised prompt using the OpenAI api, and see if OpenAI's prompts are improving over time after returning feedback with the results and previous prompt
