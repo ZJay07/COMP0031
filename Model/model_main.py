@@ -5,6 +5,7 @@ import torch
 from deap import creator, base, tools, algorithms
 import cv2
 from derm_ita import get_ita, get_fitzpatrick_type
+import random
 
 # Load CLIP model and processor
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
@@ -48,11 +49,79 @@ def get_skin_tone_score(img):
         return None
 
 class GAOptimizer:
-    def __init__(self) -> None:
+
+    '''
+    hyperparameters to tune:
+    1.) Denoising steps 1-50
+    2.) Guidance scale 2-20?
+    3.) Seed 0-2^9
+        The same seed and prompt combo give the same exact image
+    
+    '''
+    def __init__(self, attributes={}) -> None:
+        self.number_of_generations = int(attributes['number_of_generations'])
+        self.mutation_probability= float(attributes['mutation_probability'])
+        self.population_size=float(attributes['population_size'])
+        # self.numSel=int(attributes['num_sel'])
+        # self.muSel=int(attributes['mu_sel'])
+        # self.lambdaSel=int(attributes['lambda_sel'])
+        # self.innerMutProb=float(attributes['inner_mut_prob'])
+        # self.populationSize=int(attributes['population_size'])
+        # self.tournamentSel=int(attributes['tournament_sel'])
+        # self.weights=attributes["weights"]
+        # self.prompt=attributes["prompt"]
         pass
 
+    def create_population(self):
+        init_population = {
+            'denoising_steps': random.randint(1,50),
+            'guidance_scale': random.randint(1,20),
+            'seed': random.randint(0,2**9)
+        }
+
+    def initialise_population(self):
+        population = []
+        for n in range(0,self.population_size):
+            population.append(self.create_population())
+
+    # after image generation
     def eval_fitness(self, groupImage):
-        pass
+        skin_tone_counts = {'light': 0, 'dark': 0}
+        gender_counts = {'male': 0, 'female': 0}
+
+        for image in groupImage:
+            skin_tone_score = get_skin_tone_score(image) 
+            gender_scores = get_gender_score_with_clip(image) 
+
+            # for skintone we consider 1-3 to be light skin, and 4-6 to be darler skin
+            if skin_tone_score in [1, 2, 3]:
+                skin_tone_counts['light'] += 1
+            else:
+                skin_tone_counts['dark'] += 1
+
+        # for simplicity, ive grouped gender to discrete categories. More likely female = 0, more likely male = 1
+            if gender_scores[0] > gender_scores[1]:
+                gender_counts['female'] += 1
+            else:
+                gender_counts['male'] += 1
+
+        total_images = len(groupImage)
+        # goal is to have an even split of male to female and light to dark skin. closest to 0.5 is better
+        light_skin_ratio = skin_tone_counts['light'] / total_images
+        dark_skin_ratio = skin_tone_counts['dark'] / total_images
+
+        female_ratio = gender_counts['female'] / total_images
+        male_ratio = gender_counts['male'] / total_images
+
+        # goal is to minimise fitness(seems counterintuitive but i think it makes more sense here)
+        # so i calculate sum of distance to goal for each metric. the closer it is to 0, the less biased it is
+        skin_tone_fitness = abs(light_skin_ratio - 0.5) + abs(dark_skin_ratio - 0.5) 
+        gender_fitness = abs(female_ratio - 0.5) + abs(male_ratio - 0.5) 
+
+        composite_fitness = skin_tone_fitness + gender_fitness
+
+        return composite_fitness
+
 
     def crossover(ind1, ind2):
         pass
@@ -60,7 +129,7 @@ class GAOptimizer:
     def mutate(individual, param_ranges):
         pass
 
-    def optimization(self):
+    def optimization(self, population):
         pass
 
 if __name__ == "__main__":
