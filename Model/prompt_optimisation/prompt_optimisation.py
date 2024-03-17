@@ -32,7 +32,7 @@ def get_initial_prompt(profession):
         gpt_prompt = f"Generate a creative, gender-neutral and unbiased physical description of a person working as a {profession}, suitable for generating images with Stable Diffusion that is less than 20 words. Provide 1 variation. to output JSON."
         # Generate prompts using the OpenAI API
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[
                 {"role": "user", "content": gpt_prompt},
             ]
@@ -116,7 +116,7 @@ def get_optimised_prompt(inital_prompt, profession, total_score, man_score, woma
         print(f"Prompting GPT: {gpt_prompt} ")
         # Generate prompts using the OpenAI API
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[
                 {"role": "user", "content": gpt_prompt},
             ]
