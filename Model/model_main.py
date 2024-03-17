@@ -2,10 +2,12 @@ from diffusers import StableDiffusionPipeline
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 import torch
-from deap import creator, base, tools, algorithms
+from deap import creator, base, tools, algorithms #library for genetic algorithm
 import cv2
 from derm_ita import get_ita, get_fitzpatrick_type
 import random
+import copy
+import numpy
 
 # Load CLIP model and processor
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
@@ -61,28 +63,18 @@ class GAOptimizer:
     def __init__(self, attributes={}) -> None:
         self.number_of_generations = int(attributes['number_of_generations'])
         self.mutation_probability= float(attributes['mutation_probability'])
-        self.population_size=float(attributes['population_size'])
-        # self.numSel=int(attributes['num_sel'])
-        # self.muSel=int(attributes['mu_sel'])
-        # self.lambdaSel=int(attributes['lambda_sel'])
-        # self.innerMutProb=float(attributes['inner_mut_prob'])
-        # self.populationSize=int(attributes['population_size'])
-        # self.tournamentSel=int(attributes['tournament_sel'])
-        # self.weights=attributes["weights"]
-        # self.prompt=attributes["prompt"]
-        pass
+        self.inner_mutation_probability = float(attributes['inner_mutation_probability'])
+        self.population_size=int(attributes['population_size'])
+        self.selection_size=int(attributes['selection_size'])
+        self.crossover_probabiliy=int(attributes['crossover_probabiliy'])
 
-    def create_population(self):
+    def create_individual(self):
         init_population = {
             'denoising_steps': random.randint(1,50),
             'guidance_scale': random.randint(1,20),
             'seed': random.randint(0,2**9)
         }
-
-    def initialise_population(self):
-        population = []
-        for n in range(0,self.population_size):
-            population.append(self.create_population())
+        return init_population
 
     # after image generation
     def eval_fitness(self, groupImage):
@@ -123,14 +115,46 @@ class GAOptimizer:
         return composite_fitness
 
 
-    def crossover(ind1, ind2):
-        pass
+    def crossover(self,individual1, individual2):
+        # randomly select which genes to crossover using DEAP library
+        offspring1, offspring2 = tools.cxUniform(individual1, individual2, indpb=0.5)
+        return [offspring1, offspring2]
 
-    def mutate(individual, param_ranges):
-        pass
+    def mutate(self,individual):
+        ind = copy.copy(individual)
+        new_ind = self.create_individual()
+
+        for chromsome in individual.keys():
+            if random.random() < self.inner_mutation_probability:
+                ind[chromsome] = new_ind[chromsome]
+        return ind 
 
     def optimization(self, population):
-        pass
+        creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+        creator.create("Individual", dict, fitness=creator.FitnessMin)
+        toolbox = base.Toolbox()
+        toolbox.register("individual", self.create_individual, creator.Individual)
+        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+        toolbox.register("evaluate", self.eval_fitness)
+        toolbox.register("mate", self.crossover)
+        toolbox.register("mutate", self.mutate)
+        toolbox.register("select", tools.selTournament,tournsize=self.selection_size)
+
+        # collect statistsics for the individuals in population
+        stats=tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats.register("avg",numpy.mean,axis=0)
+        stats.register("std",numpy.std,axis=0)
+        stats.register("min",numpy.min,axis=0)
+        stats.register("max",numpy.max,axis=0)
+
+        population = toolbox.population(n=self.population_size)
+
+        # run simple GA. offspring = thefinal population after GA is finished.
+        offspring,logbook = algorithms.eaSimple(population,toolbox, self.crossover_probabiliy, self.mutation_probability, self.number_of_generations, stats)
+
+        # select the best individual 
+        best = tools.selBest(population, k=1)
+        return best[0],offspring,logbook
 
 if __name__ == "__main__":
     prompt = "An image of a modern software engineer working at a computer in a tech company office."
