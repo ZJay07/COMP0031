@@ -18,19 +18,20 @@ def generate_image(prompt, hyperparameters={}):
     #  get hyperparameters
     denoising_steps = hyperparameters['denoising_steps']
     guidance_scale = hyperparameters['guidance_scale']
-    seed = hyperparameters['seed']
+    # seed = hyperparameters['seed']
 
-    generator = torch.Generator("cuda").manual_seed(seed)
+    # generator = torch.Generator("cpu").manual_seed(seed)
 
     # Load the pipeline for the specified model
-    pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2").to("cuda") # Use cuda if you have a good GPU, otherwise CPU
+    pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2").to("cpu") # Use cuda if you have a good GPU, otherwise CPU
     pipe = pipe.to(torch.float32)
     # Generate the image
     with torch.no_grad():
         image = pipe(prompt=prompt,
                      guidance_scale = guidance_scale,
                      num_inference_steps = denoising_steps,
-                     generator=generator).images[0] 
+                    #  generator=generator).images[0]
+                    ) 
     return image
 
 # Function to score images with CLIP
@@ -77,6 +78,7 @@ class GAOptimizer:
         self.population_size=int(attributes['population_size'])
         self.selection_size=int(attributes['selection_size'])
         self.crossover_probabiliy=int(attributes['crossover_probabiliy'])
+        self.setup_deap()
 
     def create_individual(self):
         init_population = {
@@ -102,6 +104,7 @@ class GAOptimizer:
 
         groupImage = []
 
+        print(f"Generating Images for:\n {individual}")
         for i in range(10):
             # Generate the image
             image = generate_image(prompt, individual)
@@ -114,6 +117,7 @@ class GAOptimizer:
         skin_tone_counts = {'light': 0, 'dark': 0}
         gender_counts = {'male': 0, 'female': 0}
 
+        print("Analysing images ...")
         for image in groupImage:
             skin_tone_score = get_skin_tone_score(image) 
             gender_scores = get_gender_score_with_clip(image) 
@@ -130,6 +134,8 @@ class GAOptimizer:
             else:
                 gender_counts['male'] += 1
 
+
+        print("Calculating Fitness ...")
         total_images = len(groupImage)
         # goal is to have an even split of male to female and light to dark skin. closest to 0.5 is better
         light_skin_ratio = skin_tone_counts['light'] / total_images
@@ -144,11 +150,18 @@ class GAOptimizer:
         gender_fitness = abs(female_ratio - 0.5) + abs(male_ratio - 0.5) 
 
         combined_fitness = skin_tone_fitness + gender_fitness
+        print(f'Individual: {individual}\n 
+              Skintone Fitness: {skin_tone_fitness}\n 
+              Gender Fitness: {gender_fitness}\n 
+              Combined Fitness: {combined_fitness}')
+        
+        print ("Evaluation done!")
 
         return (combined_fitness,)
 
 
     def crossover(self,individual1, individual2):
+        print ("Crossing over ...")
         # randomly select which genes to crossover using DEAP library
 
         # convert to lists
@@ -164,6 +177,7 @@ class GAOptimizer:
         return new_ind1, new_ind2
 
     def mutate(self,individual):
+        print("Mutating ...")
         ind = copy.copy(individual)
         new_ind = self.create_individual()
 
@@ -172,17 +186,20 @@ class GAOptimizer:
                 ind[chromsome] = new_ind[chromsome]
         return ind 
 
-    def optimization(self, population):
+    def setup_deap(self):
         creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
         creator.create("Individual", dict, fitness=creator.FitnessMin)
-        toolbox = base.Toolbox()
-        toolbox.register("individual", self.create_individual, creator.Individual)
-        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-        toolbox.register("evaluate", self.eval_fitness)
-        toolbox.register("mate", self.crossover)
-        toolbox.register("mutate", self.mutate)
-        toolbox.register("select", tools.selTournament,tournsize=self.selection_size)
 
+        self.toolbox = base.Toolbox()
+        self.toolbox.register("individual", tools.initIterate, creator.Individual, self.create_individual)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
+        self.toolbox.register("evaluate", self.eval_fitness)
+        self.toolbox.register("mate", self.crossover)
+        self.toolbox.register("mutate", self.mutate)
+        self.toolbox.register("select", tools.selTournament,tournsize=self.selection_size)
+
+
+    def optimization(self):
         # collect statistsics for the individuals in population
         stats=tools.Statistics(key=lambda ind: ind.fitness.values)
         stats.register("avg",numpy.mean,axis=0)
@@ -190,10 +207,11 @@ class GAOptimizer:
         stats.register("min",numpy.min,axis=0)
         stats.register("max",numpy.max,axis=0)
 
-        population = toolbox.population(n=self.population_size)
+        population = self.toolbox.population(n=self.population_size)
 
+        print("Running GAO ...")
         # run simple GA. offspring = thefinal population after GA is finished.
-        offspring,logbook = algorithms.eaSimple(population,toolbox, self.crossover_probabiliy, self.mutation_probability, self.number_of_generations, stats)
+        offspring,logbook = algorithms.eaSimple(population,self.toolbox, self.crossover_probabiliy, self.mutation_probability, self.number_of_generations, stats)
 
         # select the best individual 
         best = tools.selBest(population, k=1)
