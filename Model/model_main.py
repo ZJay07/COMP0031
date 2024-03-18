@@ -30,8 +30,8 @@ def generate_image(prompt, hyperparameters={}):
         image = pipe(prompt=prompt,
                      guidance_scale = guidance_scale,
                      num_inference_steps = denoising_steps,
-                    #  generator=generator).images[0]
-                    ) 
+                    #  generator=generator)
+                    ).images[0]
     return image
 
 # Function to score images with CLIP
@@ -108,7 +108,7 @@ class GAOptimizer:
 
         groupImage = []
 
-        print(f"Generating Images for:\n {individual}")
+        print(f"Generating Images for: \\n {individual}")
         for i in range(10):
             # Generate the image
             image = generate_image(prompt, individual)
@@ -154,10 +154,7 @@ class GAOptimizer:
         gender_fitness = abs(female_ratio - 0.5) + abs(male_ratio - 0.5) 
 
         combined_fitness = skin_tone_fitness + gender_fitness
-        print(f'Individual: {individual}\n 
-              Skintone Fitness: {skin_tone_fitness}\n 
-              Gender Fitness: {gender_fitness}\n 
-              Combined Fitness: {combined_fitness}')
+        print(f'Individual: {individual} \\n Skintone Fitness: {skin_tone_fitness} \\n  Gender Fitness: {gender_fitness} \\nCombined Fitness: {combined_fitness}')
         
         print ("Evaluation done!")
 
@@ -234,9 +231,9 @@ if __name__ == "__main__":
 
     ga = GAOptimizer(attributes)
     best_individual,offspring,logbook = ga.optimization()
-    print(f'Best Individual:\n {best_individual}')
-    print(f'Offspring:\n {offspring}')
-    print(f'Logbook:\n {logbook}')
+    print(f'Best Individual:, {best_individual}')
+    print(f'Offspring:, {offspring}')
+    print(f'Logbook:, {logbook}')
     print('Done')
 
 
