@@ -83,18 +83,22 @@ class GAOptimizer:
     def create_individual(self):
         init_population = {
             'denoising_steps': random.randint(1,50),
-            'guidance_scale': random.randint(1,20),
-            'seed': random.randint(0,2**9)
+            'guidance_scale': random.randint(1,20)
+            #, 'seed': random.randint(0,2**9)
         }
         return init_population
 
 # helper functions so I can use built in crossover method
     
     def individual_to_list(self,individual_dict):
-        return [individual_dict['denoising_steps'], individual_dict['guidance_scale'], individual_dict['seed']]
+        return [individual_dict['denoising_steps'], individual_dict['guidance_scale'] 
+                #, individual_dict['seed']
+                ]
 
     def list_to_individual(self,individual_list):
-        keys = ['denoising_steps', 'guidance_scale', 'seed']
+        keys = ['denoising_steps', 'guidance_scale'
+                # , 'seed'
+                ]
         return dict(zip(keys, individual_list))
 
 
