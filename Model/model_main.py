@@ -14,13 +14,23 @@ clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
 # Function to generate images with Stable Diffusion
-def generate_image(prompt):
+def generate_image(prompt, hyperparameters={}):
+    #  get hyperparameters
+    denoising_steps = hyperparameters['denoising_steps']
+    guidance_scale = hyperparameters['guidance_scale']
+    seed = hyperparameters['seed']
+
+    generator = torch.Generator("cuda").manual_seed(seed)
+
     # Load the pipeline for the specified model
-    pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2").to("cuda") # Use cuda if you have a good GPU, otherwise
+    pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2").to("cuda") # Use cuda if you have a good GPU, otherwise CPU
     pipe = pipe.to(torch.float32)
     # Generate the image
     with torch.no_grad():
-        image = pipe(prompt=prompt).images[0] 
+        image = pipe(prompt=prompt,
+                     guidance_scale = guidance_scale,
+                     num_inference_steps = denoising_steps,
+                     generator=generator).images[0] 
     return image
 
 # Function to score images with CLIP
@@ -76,8 +86,31 @@ class GAOptimizer:
         }
         return init_population
 
+# helper functions so I can use built in crossover method
+    
+    def individual_to_list(self,individual_dict):
+        return [individual_dict['denoising_steps'], individual_dict['guidance_scale'], individual_dict['seed']]
+
+    def list_to_individual(self,individual_list):
+        keys = ['denoising_steps', 'guidance_scale', 'seed']
+        return dict(zip(keys, individual_list))
+
+
+
     # after image generation
-    def eval_fitness(self, groupImage):
+    def eval_fitness(self, individual):
+
+        groupImage = []
+
+        for i in range(10):
+            # Generate the image
+            image = generate_image(prompt, individual)
+            groupImage.append(image)
+
+            # Save the image
+            image_path = f"./Images/generated_image__{i}.png"
+            image.save(image_path)
+
         skin_tone_counts = {'light': 0, 'dark': 0}
         gender_counts = {'male': 0, 'female': 0}
 
@@ -110,15 +143,25 @@ class GAOptimizer:
         skin_tone_fitness = abs(light_skin_ratio - 0.5) + abs(dark_skin_ratio - 0.5) 
         gender_fitness = abs(female_ratio - 0.5) + abs(male_ratio - 0.5) 
 
-        composite_fitness = skin_tone_fitness + gender_fitness
+        combined_fitness = skin_tone_fitness + gender_fitness
 
-        return composite_fitness
+        return (combined_fitness,)
 
 
     def crossover(self,individual1, individual2):
         # randomly select which genes to crossover using DEAP library
-        offspring1, offspring2 = tools.cxUniform(individual1, individual2, indpb=0.5)
-        return [offspring1, offspring2]
+
+        # convert to lists
+        list_ind1 = self.individual_to_list(individual1)
+        list_ind2 = self.individual_to_list(individual2)
+        
+        tools.cxUniform(list_ind1, list_ind2, indpb=0.5)
+        
+        # convert back to dictionaries
+        new_ind1 = self.list_to_individual(list_ind1)
+        new_ind2 = self.list_to_individual(list_ind2)
+        
+        return new_ind1, new_ind2
 
     def mutate(self,individual):
         ind = copy.copy(individual)
@@ -158,14 +201,20 @@ class GAOptimizer:
 
 if __name__ == "__main__":
     prompt = "An image of a modern software engineer working at a computer in a tech company office."
-    for i in range(10):
-        # Generate the image
-        image = generate_image(prompt)
-        # Score the image with CLIP
-        woman_score, man_score = get_gender_score_with_clip(image)
-        score_on_fitzpatrick_scale = get_fitzpatrick_type(image)
-        # Save the image
-        image_path = f"generated_image__{i}.png"
-        image.save(image_path)
-        # Print out the scores
-        print(f"Image {i}: Woman = {woman_score}, Man = {man_score}, fitz score = {score_on_fitzpatrick_scale}")
+    attributes = {
+        'number_of_generations':2,
+        'mutation_probability':0.2,
+        'inner_mutation_probability':0.2,
+        'population_size':5,
+        'selection_size':3,
+        'crossover_probabiliy':0.2
+    }
+
+    ga = GAOptimizer(attributes)
+    best_individual,offspring,logbook = ga.optimization()
+    print(f'Best Individual:\n {best_individual}')
+    print(f'Offspring:\n {offspring}')
+    print(f'Logbook:\n {logbook}')
+    print('Done')
+
+
