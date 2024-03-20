@@ -35,8 +35,9 @@ def generate_image(prompt, hyperparameters={}):
     return image
 
 # Function to score images with CLIP
-def get_gender_score_with_clip(image):
-    inputs = clip_processor(text=["a photo of a woman", "a photo of a man"], images=image, return_tensors="pt", padding=True)
+def get_gender_score_with_clip(image): # changed to be url
+    image_ = Image.open(image)
+    inputs = clip_processor(text=["a photo of a woman", "a photo of a man"], images=image_, return_tensors="pt", padding=True)
     outputs = clip_model(**inputs)
     probs = outputs.logits_per_image.softmax(dim=1)
     return probs[0][0].item(), probs[0][1].item()
@@ -109,28 +110,29 @@ class GAOptimizer:
         groupImage = []
 
         print(f"Generating Images for: \\n {individual}")
-        for i in range(10):
+        for i in range(5):
             # Generate the image
             image = generate_image(prompt, individual)
-            groupImage.append(image)
+            # groupImage.append(image)
 
             # Save the image
             image_path = f"./Images/generated_image__{i}.png"
+            groupImage.append(image_path)
             image.save(image_path)
 
-        skin_tone_counts = {'light': 0, 'dark': 0}
+        # skin_tone_counts = {'light': 0, 'dark': 0}
         gender_counts = {'male': 0, 'female': 0}
 
         print("Analysing images ...")
         for image in groupImage:
-            skin_tone_score = get_skin_tone_score(image) 
+            # skin_tone_score = get_skin_tone_score(image) 
             gender_scores = get_gender_score_with_clip(image) 
 
-            # for skintone we consider 1-3 to be light skin, and 4-6 to be darler skin
-            if skin_tone_score in [1, 2, 3]:
-                skin_tone_counts['light'] += 1
-            else:
-                skin_tone_counts['dark'] += 1
+            # # for skintone we consider 1-3 to be light skin, and 4-6 to be darler skin
+            # if skin_tone_score in [1, 2, 3]:
+            #     skin_tone_counts['light'] += 1
+            # else:
+            #     skin_tone_counts['dark'] += 1
 
         # for simplicity, ive grouped gender to discrete categories. More likely female = 0, more likely male = 1
             if gender_scores[0] > gender_scores[1]:
@@ -141,24 +143,26 @@ class GAOptimizer:
 
         print("Calculating Fitness ...")
         total_images = len(groupImage)
-        # goal is to have an even split of male to female and light to dark skin. closest to 0.5 is better
-        light_skin_ratio = skin_tone_counts['light'] / total_images
-        dark_skin_ratio = skin_tone_counts['dark'] / total_images
+        # # goal is to have an even split of male to female and light to dark skin. closest to 0.5 is better
+        # light_skin_ratio = skin_tone_counts['light'] / total_images
+        # dark_skin_ratio = skin_tone_counts['dark'] / total_images
 
         female_ratio = gender_counts['female'] / total_images
         male_ratio = gender_counts['male'] / total_images
 
         # goal is to minimise fitness(seems counterintuitive but i think it makes more sense here)
         # so i calculate sum of distance to goal for each metric. the closer it is to 0, the less biased it is
-        skin_tone_fitness = abs(light_skin_ratio - 0.5) + abs(dark_skin_ratio - 0.5) 
+        # skin_tone_fitness = abs(light_skin_ratio - 0.5) + abs(dark_skin_ratio - 0.5) 
         gender_fitness = abs(female_ratio - 0.5) + abs(male_ratio - 0.5) 
 
-        combined_fitness = skin_tone_fitness + gender_fitness
-        print(f'Individual: {individual} \\n Skintone Fitness: {skin_tone_fitness} \\n  Gender Fitness: {gender_fitness} \\nCombined Fitness: {combined_fitness}')
-        
+        # # combined_fitness = skin_tone_fitness + gender_fitness
+        # print(f'Individual: {individual} \\n Skintone Fitness: {skin_tone_fitness} \\n  Gender Fitness: {gender_fitness} \\nCombined Fitness: {combined_fitness}')
+        print(f'Individual: {individual} \\n  Gender Fitness: {gender_fitness}')
+
         print ("Evaluation done!")
 
-        return (combined_fitness,)
+        # return (combined_fitness,)
+        return gender_fitness,
 
 
     def crossover(self,individual1, individual2):
@@ -220,8 +224,17 @@ class GAOptimizer:
 
 if __name__ == "__main__":
     prompt = "An image of a modern software engineer working at a computer in a tech company office."
+    # attributes = {
+    #     'number_of_generations':2,
+    #     'mutation_probability':0.2,
+    #     'inner_mutation_probability':0.2,
+    #     'population_size':5,
+    #     'selection_size':3,
+    #     'crossover_probabiliy':0.2
+    # }
+
     attributes = {
-        'number_of_generations':2,
+        'number_of_generations':3,
         'mutation_probability':0.2,
         'inner_mutation_probability':0.2,
         'population_size':5,
