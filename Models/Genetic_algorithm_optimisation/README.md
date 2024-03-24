@@ -6,7 +6,7 @@ We are using the `deap` library to optimise stable diffusion parameters to reduc
 # Step 1
 ## Installing dependencies
 ```bash
-pip pip install diffusers Pillow transformers torch deap numpy facenet-pytorch opencv-python derm_ita
+pip install diffusers Pillow transformers torch deap numpy facenet-pytorch opencv-python derm_ita
 ```
 
 # Step 2
