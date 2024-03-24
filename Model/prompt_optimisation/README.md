@@ -16,10 +16,7 @@ OpenAI.api_key = os.getenv('OPENAI_API_KEY')
 client = OpenAI()
 ```
 
-Replace the line above with this line
-```python
-client = OpenAI(apikey="your api key here")
-```
+Feel free to change the code where `cuda` is specified to `cpu` if you don't have a Nvidia  GPU
 
 # Purpose of the experiment
-To find the most optimised prompt using the OpenAI api, and see if OpenAI's prompts are improving over time after returning feedback with the results and previous prompt
+To find the most optimised prompt using the OpenAI api, and see if OpenAI's prompts are improving over iterations after returning feedback with the results and previous prompt

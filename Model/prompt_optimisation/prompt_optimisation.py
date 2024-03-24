@@ -9,7 +9,7 @@ from openai import OpenAI
 # Load CLIP model and processor
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-clip_model = clip_model.to("cuda")
+clip_model = clip_model.to("cuda") # change to CPU if you don't have an Nvidia GPU
 
 torch.set_default_device("cuda")
 
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     3. get score (CLIP) -> 4. optimise the prompt using GPT ->
     5. Repeat 2-4 for a few epochs
     """
-    professions = ["Accountant", "Astronomer", "Biologist", "Data Analyst", "Doctor", "Engineer", "Investment banker", "IT Support"]
+    # professions = ["Accountant", "Astronomer", "Biologist", "Data Analyst", "Doctor", "Engineer", "Investment banker", "IT Support"]
     # start off with one profession first
     profession = "Software Engineer"
     results = {}
